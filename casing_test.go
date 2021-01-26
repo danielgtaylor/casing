@@ -34,6 +34,8 @@ func TestSplit(tt *testing.T) {
 		{"aB1-1Ba", []string{"a", "B", "1", "1", "Ba"}},
 		{"a.bc.d", []string{"a", "bc", "d"}},
 		{"Emojis 🎉🎊-🎈", []string{"Emojis", "🎉🎊", "🎈"}},
+		{"a b c", []string{"a", "b", "c"}},
+		{"1 2 3", []string{"1", "2", "3"}},
 	}
 
 	for _, test := range tests {
@@ -85,4 +87,11 @@ func TestRemovePart(t *testing.T) {
 
 		return part
 	}))
+}
+
+func TestRightAlign(t *testing.T) {
+	assert.Equal(t, "stream_1080p", casing.Snake("Stream1080P"))
+
+	// Custom align words
+	assert.Equal(t, "test_123foo", casing.Join(casing.MergeNumbers(casing.Split("test 123 foo"), "FOO"), "_"))
 }

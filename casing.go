@@ -52,17 +52,25 @@ var commonInitialisms = map[string]bool{
 
 	// Media initialisms
 	"1080P":  true,
+	"2D":     true,
+	"3D":     true,
 	"4K":     true,
 	"8K":     true,
 	"AAC":    true,
 	"AC3":    true,
 	"CDN":    true,
+	"DASH":   true,
 	"DRM":    true,
+	"DVR":    true,
+	"EAC3":   true,
 	"FPS":    true,
+	"GOP":    true,
 	"H264":   true,
 	"H265":   true,
 	"HD":     true,
 	"HLS":    true,
+	"MJPEG":  true,
+	"MP2T":   true,
 	"MP3":    true,
 	"MP4":    true,
 	"MPEG2":  true,
@@ -76,10 +84,33 @@ var commonInitialisms = map[string]bool{
 	"SCTE":   true,
 	"SCTE35": true,
 	"SMPTE":  true,
+	"UPID":   true,
+	"UPIDS":  true,
 	"VOD":    true,
 	"YUV420": true,
 	"YUV422": true,
 	"YUV444": true,
+}
+
+var commonSuffixes = map[string]bool{
+	// E.g. 2D, 3D
+	"D": true,
+	// E.g. 100GB
+	"GB": true,
+	// E.g. 4K, 8K
+	"K": true,
+	// E.g. 100KB
+	"KB": true,
+	// E.g. 64kbps
+	"KBPS": true,
+	// E.g. 100MB
+	"MB": true,
+	// E.g. 2500mbps
+	"MPBS": true,
+	// E.g. 1080P
+	"P": true,
+	// E.g. 100TB
+	"TB": true,
 }
 
 // TransformFunc is used to transform parts of a split string during joining.
@@ -195,15 +226,35 @@ func Join(parts []string, sep string, transform ...TransformFunc) string {
 
 // MergeNumbers will merge some number parts with their adjacent letter parts
 // to support a smarter delimited join. For example, `h264` instead of `h_264`
-// or `mp3-player` instead of `mp-3-player`.
-func MergeNumbers(parts []string) []string {
+// or `mp3-player` instead of `mp-3-player`. You can pass suffixes for right
+// aligning certain items, e.g. `K` to get `MODE_4K` instead of `MODE4_K`. If
+// no suffixes are passed, then a default set of common ones is used. Pass an
+// empty string to disable the default.
+func MergeNumbers(parts []string, suffixes ...string) []string {
 	// TODO: should we do this in-place instead?
 	results := make([]string, 0, len(parts))
 	prevNum := false
 
-	for i, part := range parts {
+	suffixLookup := map[string]bool{}
+	for _, word := range suffixes {
+		suffixLookup[strings.ToUpper(word)] = true
+	}
+	if len(suffixes) == 0 {
+		suffixLookup = commonSuffixes
+	}
+
+	for i := 0; i < len(parts); i++ {
+		part := parts[i]
 		if _, err := strconv.Atoi(part); err == nil {
 			// This part is a number!
+
+			// Special case: right aligned word
+			if i < len(parts)-1 && suffixLookup[strings.ToUpper(parts[i+1])] {
+				results = append(results, part+parts[i+1])
+				i++
+				continue
+			}
+
 			if !prevNum {
 				if i == 0 {
 					// First item must always append.
